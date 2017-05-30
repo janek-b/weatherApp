@@ -8,4 +8,5 @@ public class Constants {
     public static final String CITY_PARAM = "q";
     public static final String ZIP_PARAM = "zip";
     public static final String UNIT_PARAM = "units";
+    public static final String ICON_BASE_URL = "http://openweathermap.org/img/w/";
 }

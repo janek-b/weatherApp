@@ -12,6 +12,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -41,6 +42,7 @@ public class WeatherService {
         ArrayList<Weather> weatherArray = new ArrayList<>();
         try {
             String jsonData = response.body().string();
+            Log.d("WeatherService", jsonData);
             if (response.isSuccessful()) {
                 JSONObject weatherJSON = new JSONObject(jsonData);
                 String city = weatherJSON.getString("name");
@@ -48,11 +50,9 @@ public class WeatherService {
                 double temp = weatherJSON.getJSONObject("main").getDouble("temp");
                 double minTemp = weatherJSON.getJSONObject("main").getDouble("temp_min");
                 double maxTemp = weatherJSON.getJSONObject("main").getDouble("temp_max");
-                ArrayList<String> condition = new ArrayList<>();
-                JSONArray conditionJSON = weatherJSON.getJSONArray("weather");
-                for (int i = 0; i < conditionJSON.length(); i++) {
-                    condition.add(conditionJSON.getJSONObject(i).getString("description"));
-                }
+                HashMap<String, String> condition = new HashMap<>();
+                condition.put("description", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
+                condition.put("icon", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon"));
                 Weather weather = new Weather(city, condition, temp, minTemp, maxTemp, date);
                 weatherArray.add(weather);
             }

@@ -1,17 +1,16 @@
 package com.example.guest.weatherapp.models;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 
 public class Weather {
     private String city;
-    private ArrayList<String> condition = new ArrayList<>();
+    private HashMap<String, String> condition = new HashMap<>();
     private double temp;
     private double minTemp;
     private double maxTemp;
     private long date;
 
-    public Weather(String city, ArrayList<String> condition, double temp, double minTemp, double maxTemp, long date) {
+    public Weather(String city, HashMap<String, String> condition, double temp, double minTemp, double maxTemp, long date) {
         this.city = city;
         this.condition = condition;
         this.temp = temp;
@@ -24,7 +23,7 @@ public class Weather {
         return city;
     }
 
-    public ArrayList<String> getCondition() {
+    public HashMap<String, String> getCondition() {
         return condition;
     }
 
