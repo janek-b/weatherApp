@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.guest.weatherapp.Constants;
 import com.example.guest.weatherapp.R;
@@ -46,7 +47,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
         return mForecast.size();
     }
 
-    public class ForecastViewHolder extends RecyclerView.ViewHolder {
+    public class ForecastViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         @Bind(R.id.forecastDate) TextView mForecastDate;
         @Bind(R.id.forecastCondition) TextView mForecastCondition;
         @Bind(R.id.forecastIcon) ImageView mForecastIcon;
@@ -59,6 +60,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
             super(itemView);
             ButterKnife.bind(this, itemView);
             mContext = itemView.getContext();
+            itemView.setOnClickListener(this);
         }
 
         public void bindForecast(Forecast weather) {
@@ -70,6 +72,12 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
             mForecastMin.setText(String.format("%.1f%s", weather.getMinTemp(), (char) 0x00B0));
             String iconUrl = String.format("%s%s.png", Constants.ICON_BASE_URL, weather.getCondition().get("icon"));
             Picasso.with(mContext).load(iconUrl).into(mForecastIcon);
+        }
+
+        @Override
+        public void onClick(View v) {
+            int pos = getLayoutPosition();
+            Toast.makeText(mContext, mForecast.get(pos).getCondition().get("main"), Toast.LENGTH_SHORT).show();
         }
     }
 }

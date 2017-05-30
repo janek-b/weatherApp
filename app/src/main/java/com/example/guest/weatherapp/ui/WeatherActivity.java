@@ -1,13 +1,18 @@
 package com.example.guest.weatherapp.ui;
 
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.guest.weatherapp.Constants;
 import com.example.guest.weatherapp.R;
@@ -35,6 +40,7 @@ public class WeatherActivity extends AppCompatActivity {
     @Bind(R.id.tempTextView) TextView mTempTextView;
     @Bind(R.id.minMaxTempTextView) TextView mMinMaxTempTextView;
     @Bind(R.id.conditionIcon) ImageView mConditionIcon;
+    @Bind(R.id.weatherBackground) ImageView mWeatherBackground;
     @Bind(R.id.forecastView) RecyclerView mRecyclerView;
 
     private ForecastAdapter mAdapter;
@@ -80,8 +86,16 @@ public class WeatherActivity extends AppCompatActivity {
                         mDateTextView.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
                         mConditionTextView.setText(currentWeather.getCondition().get("description"));
                         String iconUrl = String.format("%s%s.png", Constants.ICON_BASE_URL, currentWeather.getCondition().get("icon"));
-                        Log.d("WeatherActivity", iconUrl);
                         Picasso.with(getApplicationContext()).load(iconUrl).into(mConditionIcon);
+                        String conditionId = currentWeather.getCondition().get("id");
+                        int imgId;
+                        if (conditionId.equals("800")) {
+                            imgId = getResources().getIdentifier("img800", "drawable", getPackageName());
+                        } else {
+                            imgId = getResources().getIdentifier("img"+conditionId.charAt(0), "drawable", getPackageName());
+                        }
+                        Drawable img = ResourcesCompat.getDrawable(getResources(), imgId, null);
+                        mWeatherBackground.setImageDrawable(img);
                     }
                 });
 

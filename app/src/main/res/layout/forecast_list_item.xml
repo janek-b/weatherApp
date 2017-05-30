@@ -13,7 +13,8 @@
         android:layout_alignParentTop="true"
         android:layout_margin="5dp"
         android:layout_weight="1"
-        android:text="Date" />
+        android:text="Date"
+        android:textColor="@color/colorTextIcons" />
 
     <TextView
         android:id="@+id/forecastCondition"
@@ -23,7 +24,8 @@
         android:layout_alignParentBottom="false"
         android:layout_alignParentLeft="true"
         android:layout_margin="5dp"
-        android:text="Condition" />
+        android:text="Condition"
+        android:textColor="@color/colorTextIcons" />
 
     <ImageView
         android:id="@+id/forecastIcon"
@@ -44,7 +46,8 @@
         android:layout_alignParentTop="true"
         android:layout_margin="5dp"
         android:layout_weight="1"
-        android:text="57" />
+        android:text="57"
+        android:textColor="@color/colorTextIcons" />
 
     <TextView
         android:id="@+id/forecastMin"
@@ -57,6 +60,7 @@
         android:layout_toEndOf="@+id/forecastIcon"
         android:layout_toRightOf="@+id/forecastIcon"
         android:layout_weight="1"
-        android:text="55" />
+        android:text="55"
+        android:textColor="@color/colorTextIcons" />
 
 </RelativeLayout>

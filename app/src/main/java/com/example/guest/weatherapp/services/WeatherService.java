@@ -28,7 +28,11 @@ public class WeatherService {
         OkHttpClient client = new OkHttpClient.Builder().build();
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(Constants.WEATHER_BASE_URL).newBuilder();
-        urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+        if (isZip(zipcode)) {
+            urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+        } else {
+            urlBuilder.addQueryParameter(Constants.CITY_PARAM, zipcode);
+        }
         urlBuilder.addQueryParameter(Constants.UNIT_PARAM, "imperial");
         urlBuilder.addQueryParameter(Constants.API_KEY_PARAM, Constants.WEATHER_KEY);
         String url = urlBuilder.build().toString();
@@ -43,7 +47,11 @@ public class WeatherService {
         OkHttpClient client = new OkHttpClient.Builder().build();
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(Constants.FORECAST_BASE_URL).newBuilder();
-        urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+        if (isZip(zipcode)) {
+            urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+        } else {
+            urlBuilder.addQueryParameter(Constants.CITY_PARAM, zipcode);
+        }
         urlBuilder.addQueryParameter(Constants.UNIT_PARAM, "imperial");
         urlBuilder.addQueryParameter(Constants.COUNT_PARAM, "7");
         urlBuilder.addQueryParameter(Constants.API_KEY_PARAM, Constants.WEATHER_KEY);
@@ -59,7 +67,6 @@ public class WeatherService {
         ArrayList<Weather> weatherArray = new ArrayList<>();
         try {
             String jsonData = response.body().string();
-            Log.d("WeatherService", jsonData);
             if (response.isSuccessful()) {
                 JSONObject weatherJSON = new JSONObject(jsonData);
                 String city = weatherJSON.getString("name");
@@ -68,6 +75,7 @@ public class WeatherService {
                 double minTemp = weatherJSON.getJSONObject("main").getDouble("temp_min");
                 double maxTemp = weatherJSON.getJSONObject("main").getDouble("temp_max");
                 HashMap<String, String> condition = new HashMap<>();
+                condition.put("id", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("id"));
                 condition.put("main", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("main"));
                 condition.put("description", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
                 condition.put("icon", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon"));
@@ -94,6 +102,7 @@ public class WeatherService {
                 double minTemp = forecastItem.getJSONObject("temp").getDouble("min");
                 double maxTemp = forecastItem.getJSONObject("temp").getDouble("max");
                 HashMap<String, String> condition = new HashMap<>();
+                condition.put("id", forecastItem.getJSONArray("weather").getJSONObject(0).getString("id"));
                 condition.put("main", forecastItem.getJSONArray("weather").getJSONObject(0).getString("main"));
                 condition.put("description", forecastItem.getJSONArray("weather").getJSONObject(0).getString("description"));
                 condition.put("icon", forecastItem.getJSONArray("weather").getJSONObject(0).getString("icon"));
@@ -106,5 +115,15 @@ public class WeatherService {
             e.printStackTrace();
         }
         return forecastArray;
+    }
+
+    private static boolean isZip(String input) {
+        boolean result = true;
+        try {
+            Integer zip = Integer.parseInt(input);
+        } catch(NumberFormatException e) {
+            result = false;
+        }
+        return result;
     }
 }
