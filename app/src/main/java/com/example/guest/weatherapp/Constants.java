@@ -7,4 +7,5 @@ public class Constants {
     public static final String API_KEY_PARAM = "APPID";
     public static final String CITY_PARAM = "q";
     public static final String ZIP_PARAM = "zip";
+    public static final String UNIT_PARAM = "units";
 }

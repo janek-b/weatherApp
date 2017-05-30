@@ -1,5 +1,6 @@
 package com.example.guest.weatherapp.ui;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -33,29 +34,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String searchInput = mSeachField.getText().toString();
-                getWeather(searchInput);
+                Intent intent = new Intent(MainActivity.this, WeatherActivity.class);
+                intent.putExtra("zipcode", searchInput);
+                startActivity(intent);
             }
         });
     }
 
-    private void getWeather(String zipcode) {
-        final WeatherService weatherService = new WeatherService();
-        weatherService.getWeather(zipcode, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
-            }
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                try {
-                    String jsonData = response.body().string();
-                    Log.d("MainActivity", jsonData);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        });
-    }
 }
