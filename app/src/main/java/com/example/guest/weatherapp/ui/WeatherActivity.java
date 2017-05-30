@@ -3,12 +3,16 @@ package com.example.guest.weatherapp.ui;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.guest.weatherapp.Constants;
 import com.example.guest.weatherapp.R;
+import com.example.guest.weatherapp.adapters.ForecastAdapter;
+import com.example.guest.weatherapp.models.Forecast;
 import com.example.guest.weatherapp.models.Weather;
 import com.example.guest.weatherapp.services.WeatherService;
 import com.squareup.picasso.Picasso;
@@ -31,8 +35,12 @@ public class WeatherActivity extends AppCompatActivity {
     @Bind(R.id.tempTextView) TextView mTempTextView;
     @Bind(R.id.minMaxTempTextView) TextView mMinMaxTempTextView;
     @Bind(R.id.conditionIcon) ImageView mConditionIcon;
+    @Bind(R.id.forecastView) RecyclerView mRecyclerView;
 
+    private ForecastAdapter mAdapter;
+    public static final String TAG = WeatherActivity.class.getSimpleName();
     public ArrayList<Weather> mWeather = new ArrayList<>();
+    public ArrayList<Forecast> mForecast = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +55,7 @@ public class WeatherActivity extends AppCompatActivity {
     private void getWeather(String zipcode) {
         final WeatherService weatherService = new WeatherService();
         weatherService.getWeather(zipcode, new Callback() {
+
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
@@ -59,6 +68,7 @@ public class WeatherActivity extends AppCompatActivity {
                 WeatherActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+
                         Weather currentWeather = mWeather.get(0);
                         Calendar date = Calendar.getInstance();
                         date.setTimeInMillis(currentWeather.getDate()*1000);
@@ -75,6 +85,28 @@ public class WeatherActivity extends AppCompatActivity {
                     }
                 });
 
+            }
+        });
+        weatherService.getForecast(zipcode, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                mForecast = weatherService.processForecast(response);
+
+                WeatherActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mAdapter = new ForecastAdapter(getApplicationContext(), mForecast);
+                        mRecyclerView.setAdapter(mAdapter);
+                        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(WeatherActivity.this);
+                        mRecyclerView.setLayoutManager(layoutManager);
+                        mRecyclerView.setHasFixedSize(true);
+                    }
+                });
             }
         });
     }

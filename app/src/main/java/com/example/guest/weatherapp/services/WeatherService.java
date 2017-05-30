@@ -4,6 +4,7 @@ package com.example.guest.weatherapp.services;
 import android.util.Log;
 
 import com.example.guest.weatherapp.Constants;
+import com.example.guest.weatherapp.models.Forecast;
 import com.example.guest.weatherapp.models.Weather;
 
 import org.json.JSONArray;
@@ -38,6 +39,22 @@ public class WeatherService {
         call.enqueue(callback);
     }
 
+    public static void getForecast(String zipcode, Callback callback) {
+        OkHttpClient client = new OkHttpClient.Builder().build();
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(Constants.FORECAST_BASE_URL).newBuilder();
+        urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+        urlBuilder.addQueryParameter(Constants.UNIT_PARAM, "imperial");
+        urlBuilder.addQueryParameter(Constants.COUNT_PARAM, "7");
+        urlBuilder.addQueryParameter(Constants.API_KEY_PARAM, Constants.WEATHER_KEY);
+        String url = urlBuilder.build().toString();
+
+        Request request = new Request.Builder().url(url).build();
+
+        Call call = client.newCall(request);
+        call.enqueue(callback);
+    }
+
     public ArrayList<Weather> processWeather(Response response) {
         ArrayList<Weather> weatherArray = new ArrayList<>();
         try {
@@ -51,6 +68,7 @@ public class WeatherService {
                 double minTemp = weatherJSON.getJSONObject("main").getDouble("temp_min");
                 double maxTemp = weatherJSON.getJSONObject("main").getDouble("temp_max");
                 HashMap<String, String> condition = new HashMap<>();
+                condition.put("main", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("main"));
                 condition.put("description", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
                 condition.put("icon", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon"));
                 Weather weather = new Weather(city, condition, temp, minTemp, maxTemp, date);
@@ -62,5 +80,31 @@ public class WeatherService {
             e.printStackTrace();
         }
         return weatherArray;
+    }
+
+    public ArrayList<Forecast> processForecast(Response response) {
+        ArrayList<Forecast> forecastArray = new ArrayList<>();
+        try {
+            String jsonData = response.body().string();
+            JSONObject forecastJSON = new JSONObject(jsonData);
+            JSONArray forecastJSONArray = forecastJSON.getJSONArray("list");
+            for (int i = 0; i < forecastJSONArray.length(); i++) {
+                JSONObject forecastItem = forecastJSONArray.getJSONObject(i);
+                long date = forecastItem.getLong("dt");
+                double minTemp = forecastItem.getJSONObject("temp").getDouble("min");
+                double maxTemp = forecastItem.getJSONObject("temp").getDouble("max");
+                HashMap<String, String> condition = new HashMap<>();
+                condition.put("main", forecastItem.getJSONArray("weather").getJSONObject(0).getString("main"));
+                condition.put("description", forecastItem.getJSONArray("weather").getJSONObject(0).getString("description"));
+                condition.put("icon", forecastItem.getJSONArray("weather").getJSONObject(0).getString("icon"));
+                Forecast forecast = new Forecast(condition, minTemp, maxTemp, date);
+                forecastArray.add(forecast);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return forecastArray;
     }
 }
