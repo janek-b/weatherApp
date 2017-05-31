@@ -20,6 +20,7 @@ import com.example.guest.weatherapp.adapters.ForecastAdapter;
 import com.example.guest.weatherapp.models.Forecast;
 import com.example.guest.weatherapp.models.Weather;
 import com.example.guest.weatherapp.services.WeatherService;
+import com.google.gson.Gson;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
@@ -30,12 +31,15 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Observable;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.exceptions.Exceptions;
+import io.reactivex.functions.Function;
 import io.reactivex.observers.DisposableObserver;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.Call;
@@ -81,64 +85,51 @@ public class WeatherActivity extends AppCompatActivity {
 
         disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, false))
                 .subscribeOn(Schedulers.io())
+                .map(new Function<String, Object>() {
+                    @Override public Object apply(String string) { return new Gson().fromJson(string, Weather.class); }
+                }).cast(Weather.class)
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(new DisposableObserver<String>() {
-                    @Override
-                    public void onNext(@NonNull String s) { processWeather(s); }
-                    @Override
-                    public void onError(@NonNull Throwable e) { e.printStackTrace(); }
-                    @Override
-                    public void onComplete() { Log.d(TAG, "observable complete"); }
+                .subscribeWith(new DisposableObserver<Weather>() {
+                    @Override public void onNext(@NonNull Weather s) { processWeather(s); }
+                    @Override public void onError(@NonNull Throwable e) { e.printStackTrace(); }
+                    @Override public void onComplete() { Log.d(TAG, "observable complete"); }
                 }));
 
         disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, true))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribeWith(new DisposableObserver<String>() {
-                    @Override
-                    public void onNext(@NonNull String s) {
+                    @Override public void onNext(@NonNull String s) {
                         mAdapter = new ForecastAdapter(getApplicationContext(), weatherService.processForecast(s));
                         mRecyclerView.setAdapter(mAdapter);
                         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(WeatherActivity.this);
                         mRecyclerView.setLayoutManager(layoutManager);
                         mRecyclerView.setHasFixedSize(true);
                     }
-                    @Override
-                    public void onError(@NonNull Throwable e) { e.printStackTrace(); }
-                    @Override
-                    public void onComplete() { Log.d(TAG, "observable complete"); }
+                    @Override public void onError(@NonNull Throwable e) { e.printStackTrace(); }
+                    @Override public void onComplete() { Log.d(TAG, "observable complete"); }
                 }));
     }
 
-    public void processWeather(String response) {
-        try {
-            JSONObject weatherJSON = new JSONObject(response);
-            Calendar date = Calendar.getInstance();
-            date.setTimeInMillis(weatherJSON.getLong("dt")*1000);
 
-            tempForWidget = String.format("%.1f%s", weatherJSON.getJSONObject("main").getDouble("temp"), (char) 0x00B0);
-
-            mlocationTextView.setText(weatherJSON.getString("name"));
-            mDateTextView.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
-            mTempTextView.setText(String.format("%.1f%s", weatherJSON.getJSONObject("main").getDouble("temp"), (char) 0x00B0));
-            mMinMaxTempTextView.setText(String.format("%.1f%s / %.1f%s",
-                    weatherJSON.getJSONObject("main").getDouble("temp_min"), (char) 0x00B0,
-                    weatherJSON.getJSONObject("main").getDouble("temp_max"), (char) 0x00B0));
-            mConditionTextView.setText(weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
-
-            Picasso.with(getApplicationContext())
-                    .load(String.format("%s%s.png", Constants.ICON_BASE_URL, weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon")))
-                    .into(mConditionIcon);
-
-            String conditionId = weatherJSON.getJSONArray("weather").getJSONObject(0).getString("id");
-            if (conditionId.equals("800")) {
-                mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img800", "drawable", getPackageName()), null));
-            } else {
-                mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img"+conditionId.charAt(0), "drawable", getPackageName()), null));
-            }
-        } catch(JSONException e) {
-            e.printStackTrace();
+    public void processWeather(Weather weather) {
+        Calendar date = Calendar.getInstance();
+        date.setTimeInMillis(weather.getDt()*1000);
+        mlocationTextView.setText(weather.getName());
+        mDateTextView.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
+        mTempTextView.setText(String.format("%.1f%s", weather.getMain().get("temp"), (char) 0x00B0));
+        mMinMaxTempTextView.setText(String.format("%.1f%s / %.1f%s",
+                weather.getMain().get("temp_min"), (char) 0x00B0,
+                weather.getMain().get("temp_max"), (char) 0x00B0));
+        mConditionTextView.setText(weather.getWeather().get(0).get("description").toString());
+        Picasso.with(getApplicationContext())
+                .load(String.format("%s%s.png", Constants.ICON_BASE_URL, weather.getWeather().get(0).get("icon")))
+                .into(mConditionIcon);
+        String conditionId = weather.getWeather().get(0).get("id").toString();
+        if (conditionId.equals("800")) {
+            mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img800", "drawable", getPackageName()), null));
+        } else {
+            mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img"+conditionId.charAt(0), "drawable", getPackageName()), null));
         }
-
     }
 }
