@@ -1,33 +1,32 @@
 package com.example.guest.weatherapp.models;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Forecast {
-    private HashMap<String, String> condition = new HashMap<>();
-    private double minTemp;
-    private double maxTemp;
-    private long date;
+    Map<String, Object> temp = new HashMap<>();
+    List<Map<String, Object>> weather = new ArrayList<Map<String, Object>>();
+    long dt;
 
-    public Forecast(HashMap<String, String> condition, double minTemp, double maxTemp, long date) {
-        this.condition = condition;
-        this.minTemp = minTemp;
-        this.maxTemp = maxTemp;
-        this.date = date;
+    public Forecast(){}
+
+    public Forecast(HashMap<String, Object> temp, List<Map<String, Object>> weather, long dt) {
+        this.temp = temp;
+        this.weather = weather;
+        this.dt = dt;
     }
 
-    public HashMap<String, String> getCondition() {
-        return condition;
+    public Map<String, Object> getTemp() {
+        return temp;
     }
 
-    public double getMinTemp() {
-        return minTemp;
+    public List<Map<String, Object>> getWeather() {
+        return weather;
     }
 
-    public double getMaxTemp() {
-        return maxTemp;
-    }
-
-    public long getDate() {
-        return date;
+    public long getDt() {
+        return dt;
     }
 }

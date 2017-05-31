@@ -21,6 +21,9 @@ import com.example.guest.weatherapp.models.Forecast;
 import com.example.guest.weatherapp.models.Weather;
 import com.example.guest.weatherapp.services.WeatherService;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
@@ -85,10 +88,11 @@ public class WeatherActivity extends AppCompatActivity {
 
         disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, false))
                 .subscribeOn(Schedulers.io())
-                .map(new Function<String, Object>() {
-                    @Override public Object apply(String string) { return new Gson().fromJson(string, Weather.class); }
-                }).cast(Weather.class)
-                .observeOn(AndroidSchedulers.mainThread())
+                .map(new Function<String, Weather>() {
+                    @Override public Weather apply(String string) {
+                        return new Gson().fromJson(string, Weather.class);
+                    }
+                }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeWith(new DisposableObserver<Weather>() {
                     @Override public void onNext(@NonNull Weather s) { processWeather(s); }
                     @Override public void onError(@NonNull Throwable e) { e.printStackTrace(); }
@@ -97,10 +101,21 @@ public class WeatherActivity extends AppCompatActivity {
 
         disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, true))
                 .subscribeOn(Schedulers.io())
+                .map(new Function<String, ArrayList<Forecast>>() {
+                    @Override public ArrayList<Forecast> apply(String string) {
+                        ArrayList<Forecast> forecasts = new ArrayList<>();
+                        JsonObject json = new Gson().fromJson(string, JsonObject.class);
+                        JsonArray list = json.getAsJsonArray("list");
+                        for (int i = 0; i< list.size(); i++) {
+                            forecasts.add(new Gson().fromJson(list.get(i).toString(), Forecast.class));
+                        }
+                        return forecasts;
+                    }
+                })
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(new DisposableObserver<String>() {
-                    @Override public void onNext(@NonNull String s) {
-                        mAdapter = new ForecastAdapter(getApplicationContext(), weatherService.processForecast(s));
+                .subscribeWith(new DisposableObserver<ArrayList<Forecast>>() {
+                    @Override public void onNext(@NonNull ArrayList<Forecast> s) {
+                        mAdapter = new ForecastAdapter(getApplicationContext(), s);
                         mRecyclerView.setAdapter(mAdapter);
                         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(WeatherActivity.this);
                         mRecyclerView.setLayoutManager(layoutManager);

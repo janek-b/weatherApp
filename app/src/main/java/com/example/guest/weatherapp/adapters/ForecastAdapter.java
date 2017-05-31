@@ -65,19 +65,19 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
 
         public void bindForecast(Forecast weather) {
             Calendar date = Calendar.getInstance();
-            date.setTimeInMillis(weather.getDate()*1000);
+            date.setTimeInMillis(weather.getDt()*1000);
             mForecastDate.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
-            mForecastCondition.setText(String.format("%s - %s",weather.getCondition().get("main"), weather.getCondition().get("description")));
-            mForecastMax.setText(String.format("%.1f%s", weather.getMaxTemp(), (char) 0x00B0));
-            mForecastMin.setText(String.format("%.1f%s", weather.getMinTemp(), (char) 0x00B0));
-            String iconUrl = String.format("%s%s.png", Constants.ICON_BASE_URL, weather.getCondition().get("icon"));
+            mForecastCondition.setText(String.format("%s - %s",weather.getWeather().get(0).get("main"), weather.getWeather().get(0).get("description")));
+            mForecastMax.setText(String.format("%.1f%s", weather.getTemp().get("max"), (char) 0x00B0));
+            mForecastMin.setText(String.format("%.1f%s", weather.getTemp().get("min"), (char) 0x00B0));
+            String iconUrl = String.format("%s%s.png", Constants.ICON_BASE_URL, weather.getWeather().get(0).get("icon"));
             Picasso.with(mContext).load(iconUrl).into(mForecastIcon);
         }
 
         @Override
         public void onClick(View v) {
-            int pos = getLayoutPosition();
-            Toast.makeText(mContext, mForecast.get(pos).getCondition().get("main"), Toast.LENGTH_SHORT).show();
+//            int pos = getLayoutPosition();
+//            Toast.makeText(mContext, mForecast.get(pos).getWeather().get("main"), Toast.LENGTH_SHORT).show();
         }
     }
 }

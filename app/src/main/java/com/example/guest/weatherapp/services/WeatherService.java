@@ -50,30 +50,6 @@ public class WeatherService {
         });
     }
 
-    public ArrayList<Forecast> processForecast(String response) {
-        ArrayList<Forecast> forecastArray = new ArrayList<>();
-        try {
-            JSONObject forecastJSON = new JSONObject(response);
-            JSONArray forecastJSONArray = forecastJSON.getJSONArray("list");
-            for (int i = 0; i < forecastJSONArray.length(); i++) {
-                JSONObject forecastItem = forecastJSONArray.getJSONObject(i);
-                long date = forecastItem.getLong("dt");
-                double minTemp = forecastItem.getJSONObject("temp").getDouble("min");
-                double maxTemp = forecastItem.getJSONObject("temp").getDouble("max");
-                HashMap<String, String> condition = new HashMap<>();
-                condition.put("id", forecastItem.getJSONArray("weather").getJSONObject(0).getString("id"));
-                condition.put("main", forecastItem.getJSONArray("weather").getJSONObject(0).getString("main"));
-                condition.put("description", forecastItem.getJSONArray("weather").getJSONObject(0).getString("description"));
-                condition.put("icon", forecastItem.getJSONArray("weather").getJSONObject(0).getString("icon"));
-                Forecast forecast = new Forecast(condition, minTemp, maxTemp, date);
-                forecastArray.add(forecast);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return forecastArray;
-    }
-
     private static String isZip(String input) {
         String result = Constants.CITY_PARAM;
         if (input.matches("\\d{5}")) {
