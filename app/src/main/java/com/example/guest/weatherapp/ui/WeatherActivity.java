@@ -22,13 +22,22 @@ import com.example.guest.weatherapp.models.Weather;
 import com.example.guest.weatherapp.services.WeatherService;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Locale;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.observers.DisposableObserver;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -43,10 +52,12 @@ public class WeatherActivity extends AppCompatActivity {
     @Bind(R.id.weatherBackground) ImageView mWeatherBackground;
     @Bind(R.id.forecastView) RecyclerView mRecyclerView;
 
+    public static String tempForWidget = "";
+
     private ForecastAdapter mAdapter;
     public static final String TAG = WeatherActivity.class.getSimpleName();
-    public ArrayList<Weather> mWeather = new ArrayList<>();
-    public ArrayList<Forecast> mForecast = new ArrayList<>();
+
+    private final CompositeDisposable disposables = new CompositeDisposable();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,70 +69,76 @@ public class WeatherActivity extends AppCompatActivity {
         getWeather(zipcode);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        disposables.clear();
+    }
+
+
     private void getWeather(String zipcode) {
         final WeatherService weatherService = new WeatherService();
-        weatherService.getWeather(zipcode, new Callback() {
 
-            @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                mWeather = weatherService.processWeather(response);
-
-                WeatherActivity.this.runOnUiThread(new Runnable() {
+        disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, false))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new DisposableObserver<String>() {
                     @Override
-                    public void run() {
-
-                        Weather currentWeather = mWeather.get(0);
-                        Calendar date = Calendar.getInstance();
-                        date.setTimeInMillis(currentWeather.getDate()*1000);
-                        String minTemp = String.format("%.1f%s", currentWeather.getMinTemp(), (char) 0x00B0);
-                        String maxTemp = String.format("%.1f%s", currentWeather.getMaxTemp(), (char) 0x00B0);
-                        mlocationTextView.setText(currentWeather.getCity());
-                        mTempTextView.setText(String.format("%.1f%s", currentWeather.getTemp(), (char) 0x00B0));
-                        mMinMaxTempTextView.setText(maxTemp + " / " + minTemp);
-                        mDateTextView.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
-                        mConditionTextView.setText(currentWeather.getCondition().get("description"));
-                        String iconUrl = String.format("%s%s.png", Constants.ICON_BASE_URL, currentWeather.getCondition().get("icon"));
-                        Picasso.with(getApplicationContext()).load(iconUrl).into(mConditionIcon);
-                        String conditionId = currentWeather.getCondition().get("id");
-                        int imgId;
-                        if (conditionId.equals("800")) {
-                            imgId = getResources().getIdentifier("img800", "drawable", getPackageName());
-                        } else {
-                            imgId = getResources().getIdentifier("img"+conditionId.charAt(0), "drawable", getPackageName());
-                        }
-                        Drawable img = ResourcesCompat.getDrawable(getResources(), imgId, null);
-                        mWeatherBackground.setImageDrawable(img);
-                    }
-                });
-
-            }
-        });
-        weatherService.getForecast(zipcode, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                mForecast = weatherService.processForecast(response);
-
-                WeatherActivity.this.runOnUiThread(new Runnable() {
+                    public void onNext(@NonNull String s) { processWeather(s); }
                     @Override
-                    public void run() {
-                        mAdapter = new ForecastAdapter(getApplicationContext(), mForecast);
+                    public void onError(@NonNull Throwable e) { e.printStackTrace(); }
+                    @Override
+                    public void onComplete() { Log.d(TAG, "observable complete"); }
+                }));
+
+        disposables.add(weatherService.getWeatherForecast(weatherService.buildUrl(zipcode, true))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new DisposableObserver<String>() {
+                    @Override
+                    public void onNext(@NonNull String s) {
+                        mAdapter = new ForecastAdapter(getApplicationContext(), weatherService.processForecast(s));
                         mRecyclerView.setAdapter(mAdapter);
                         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(WeatherActivity.this);
                         mRecyclerView.setLayoutManager(layoutManager);
                         mRecyclerView.setHasFixedSize(true);
                     }
-                });
+                    @Override
+                    public void onError(@NonNull Throwable e) { e.printStackTrace(); }
+                    @Override
+                    public void onComplete() { Log.d(TAG, "observable complete"); }
+                }));
+    }
+
+    public void processWeather(String response) {
+        try {
+            JSONObject weatherJSON = new JSONObject(response);
+            Calendar date = Calendar.getInstance();
+            date.setTimeInMillis(weatherJSON.getLong("dt")*1000);
+
+            tempForWidget = String.format("%.1f%s", weatherJSON.getJSONObject("main").getDouble("temp"), (char) 0x00B0);
+
+            mlocationTextView.setText(weatherJSON.getString("name"));
+            mDateTextView.setText(date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.US));
+            mTempTextView.setText(String.format("%.1f%s", weatherJSON.getJSONObject("main").getDouble("temp"), (char) 0x00B0));
+            mMinMaxTempTextView.setText(String.format("%.1f%s / %.1f%s",
+                    weatherJSON.getJSONObject("main").getDouble("temp_min"), (char) 0x00B0,
+                    weatherJSON.getJSONObject("main").getDouble("temp_max"), (char) 0x00B0));
+            mConditionTextView.setText(weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
+
+            Picasso.with(getApplicationContext())
+                    .load(String.format("%s%s.png", Constants.ICON_BASE_URL, weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon")))
+                    .into(mConditionIcon);
+
+            String conditionId = weatherJSON.getJSONArray("weather").getJSONObject(0).getString("id");
+            if (conditionId.equals("800")) {
+                mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img800", "drawable", getPackageName()), null));
+            } else {
+                mWeatherBackground.setImageDrawable(ResourcesCompat.getDrawable(getResources(), getResources().getIdentifier("img"+conditionId.charAt(0), "drawable", getPackageName()), null));
             }
-        });
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
+
     }
 }

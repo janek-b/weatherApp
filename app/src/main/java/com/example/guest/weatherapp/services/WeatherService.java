@@ -1,11 +1,7 @@
 package com.example.guest.weatherapp.services;
 
-
-import android.util.Log;
-
 import com.example.guest.weatherapp.Constants;
 import com.example.guest.weatherapp.models.Forecast;
-import com.example.guest.weatherapp.models.Weather;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,9 +10,10 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
 
-import okhttp3.Call;
-import okhttp3.Callback;
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -24,77 +21,39 @@ import okhttp3.Response;
 
 public class WeatherService {
 
-    public static void getWeather(String zipcode, Callback callback) {
-        OkHttpClient client = new OkHttpClient.Builder().build();
-
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(Constants.WEATHER_BASE_URL).newBuilder();
-        if (isZip(zipcode)) {
-            urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
+    public static String buildUrl(String location, boolean forecast) {
+        HttpUrl.Builder urlBuilder;
+        if (forecast) {
+            urlBuilder = HttpUrl.parse(Constants.FORECAST_BASE_URL).newBuilder();
+            urlBuilder.addQueryParameter(Constants.COUNT_PARAM, "7");
         } else {
-            urlBuilder.addQueryParameter(Constants.CITY_PARAM, zipcode);
+            urlBuilder = HttpUrl.parse(Constants.WEATHER_BASE_URL).newBuilder();
         }
+        urlBuilder.addQueryParameter(isZip(location), location);
         urlBuilder.addQueryParameter(Constants.UNIT_PARAM, "imperial");
         urlBuilder.addQueryParameter(Constants.API_KEY_PARAM, Constants.WEATHER_KEY);
-        String url = urlBuilder.build().toString();
-
-        Request request = new Request.Builder().url(url).build();
-
-        Call call = client.newCall(request);
-        call.enqueue(callback);
+        return urlBuilder.build().toString();
     }
 
-    public static void getForecast(String zipcode, Callback callback) {
-        OkHttpClient client = new OkHttpClient.Builder().build();
-
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(Constants.FORECAST_BASE_URL).newBuilder();
-        if (isZip(zipcode)) {
-            urlBuilder.addQueryParameter(Constants.ZIP_PARAM, zipcode);
-        } else {
-            urlBuilder.addQueryParameter(Constants.CITY_PARAM, zipcode);
-        }
-        urlBuilder.addQueryParameter(Constants.UNIT_PARAM, "imperial");
-        urlBuilder.addQueryParameter(Constants.COUNT_PARAM, "7");
-        urlBuilder.addQueryParameter(Constants.API_KEY_PARAM, Constants.WEATHER_KEY);
-        String url = urlBuilder.build().toString();
-
-        Request request = new Request.Builder().url(url).build();
-
-        Call call = client.newCall(request);
-        call.enqueue(callback);
-    }
-
-    public ArrayList<Weather> processWeather(Response response) {
-        ArrayList<Weather> weatherArray = new ArrayList<>();
-        try {
-            String jsonData = response.body().string();
-            if (response.isSuccessful()) {
-                JSONObject weatherJSON = new JSONObject(jsonData);
-                String city = weatherJSON.getString("name");
-                long date = weatherJSON.getLong("dt");
-                double temp = weatherJSON.getJSONObject("main").getDouble("temp");
-                double minTemp = weatherJSON.getJSONObject("main").getDouble("temp_min");
-                double maxTemp = weatherJSON.getJSONObject("main").getDouble("temp_max");
-                HashMap<String, String> condition = new HashMap<>();
-                condition.put("id", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("id"));
-                condition.put("main", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("main"));
-                condition.put("description", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("description"));
-                condition.put("icon", weatherJSON.getJSONArray("weather").getJSONObject(0).getString("icon"));
-                Weather weather = new Weather(city, condition, temp, minTemp, maxTemp, date);
-                weatherArray.add(weather);
+    public static Observable<String> getWeatherForecast(final String url) {
+        final OkHttpClient client = new OkHttpClient.Builder().build();
+        return Observable.defer(new Callable<ObservableSource<? extends String>>() {
+            @Override
+            public ObservableSource<? extends String> call() throws Exception {
+                try {
+                    Response response = client.newCall(new Request.Builder().url(url).build()).execute();
+                    return Observable.just(response.body().string());
+                } catch (IOException e) {
+                    return Observable.error(e);
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return weatherArray;
+        });
     }
 
-    public ArrayList<Forecast> processForecast(Response response) {
+    public ArrayList<Forecast> processForecast(String response) {
         ArrayList<Forecast> forecastArray = new ArrayList<>();
         try {
-            String jsonData = response.body().string();
-            JSONObject forecastJSON = new JSONObject(jsonData);
+            JSONObject forecastJSON = new JSONObject(response);
             JSONArray forecastJSONArray = forecastJSON.getJSONArray("list");
             for (int i = 0; i < forecastJSONArray.length(); i++) {
                 JSONObject forecastItem = forecastJSONArray.getJSONObject(i);
@@ -109,20 +68,16 @@ public class WeatherService {
                 Forecast forecast = new Forecast(condition, minTemp, maxTemp, date);
                 forecastArray.add(forecast);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (JSONException e) {
             e.printStackTrace();
         }
         return forecastArray;
     }
 
-    private static boolean isZip(String input) {
-        boolean result = true;
-        try {
-            Integer zip = Integer.parseInt(input);
-        } catch(NumberFormatException e) {
-            result = false;
+    private static String isZip(String input) {
+        String result = Constants.CITY_PARAM;
+        if (input.matches("\\d{5}")) {
+            result = Constants.ZIP_PARAM;
         }
         return result;
     }
